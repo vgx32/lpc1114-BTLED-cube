@@ -32,7 +32,7 @@ PROJECT = lpc1114_blink_led
 CORE = cortex-m0
 
 # linker script
-LD_SCRIPT = LPC11x14_30x_rom.ld
+LD_SCRIPT = LPC11x14_10x_rom.ld
 
 # output folder (absolute or relative path, leave empty for in-tree compilation)
 OUT_DIR = out
