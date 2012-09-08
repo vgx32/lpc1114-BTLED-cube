@@ -45,7 +45,7 @@ PROVIDE(__process_stack_size = __process_stack_size);
 MEMORY
 {
 	rom (rx)	: org = 0x00000000, len = 32k
-	ram (rwx)	: org = 0x10000000, len = 8k
+	ram (rwx)	: org = 0x10000000, len = 4k
 }
 
 __rom_start = ORIGIN(rom);
