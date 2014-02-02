@@ -7,7 +7,7 @@
 * compiler: arm-none-eabi-gcc (Sourcery CodeBench Lite 2011.09-69) 4.6.1
 *
 * description:
-* Linker script for LPC11(C)14/30x (32kB Flash, 8kB SRAM).
+* Linker script for LPC11(C)14/30x (32kB Flash, 4kB SRAM).
 ******************************************************************************/
 
 SEARCH_DIR(.);
