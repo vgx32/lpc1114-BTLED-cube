@@ -26,7 +26,7 @@ RM = rm -f
 #=============================================================================#
 
 # project name
-PROJECT = lpc1114_blink_led
+PROJECT = led_cube
 
 # core type
 CORE = cortex-m0
@@ -48,7 +48,7 @@ AS_DEFS =
 
 # include directories (absolute or relative paths to additional folders with
 # headers, current folder is always included)
-INC_DIRS =
+INC_DIRS = ./lib
 
 # library directories (absolute or relative paths to additional folders with
 # libraries)
@@ -60,7 +60,7 @@ LIBS =
 
 # additional directories with source files (absolute or relative paths to
 # folders with source files, current folder is always included)
-SRCS_DIRS =
+SRCS_DIRS = ./lib
 
 # extension of C++ files
 CXX_EXT = cpp
@@ -84,8 +84,9 @@ AS_EXT = S
 AS_SRCS = $(wildcard $(patsubst %, %/*.$(AS_EXT), . $(SRCS_DIRS)))
 
 # optimization flags ("-O0" - no optimization, "-O1" - optimize, "-O2" -
-# optimize even more, "-Os" - optimize for size or "-O3" - optimize yet more) 
-OPTIMIZATION = -O2
+# optimize even more, "-Os" - optimize for size or "-O3" - optimize yet more)
+OPTIMIZATION = -O1
+# OPTIMIZATION = -O2 -- TODO: this causes main loop to be removed...
 
 # set to 1 to optimize size by removing unused code and data during link phase
 REMOVE_UNUSED = 1
@@ -278,6 +279,14 @@ print_size :
 
 make_output_dir :
 	$(shell mkdir $(OUT_DIR_F) 2>/dev/null)
+
+#-----------------------------------------------------------------------------#
+# flash hex onto chip
+#-----------------------------------------------------------------------------#
+
+flash : $(HEX)
+	../lpc21isp/lpc21isp $(HEX) /dev/ttyUSB0 115200 120000
+
 
 #=============================================================================#
 # make clean

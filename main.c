@@ -38,9 +38,9 @@
 #include <stdint.h>
 
 #include "inc/LPC11xx.h"
-
+#include "inc/core_cm0.h"
 #include "config.h"
-
+#include "buffer.h"
 #include "hdr/hdr_syscon.h"
 
 /*
@@ -58,12 +58,48 @@
 static void flash_access_time(uint32_t frequency);
 static uint32_t pll_start(uint32_t crystal, uint32_t frequency);
 static void system_init(void);
-
+static void blink_led(void);
+static void init_uart(void);
+static void write_uart(char* data, uint8_t len);
+// static void read_uart(void);
 /*
 +=============================================================================+
 | global functions
 +=============================================================================+
 */
+
+#define RBRIE 	0x1
+#define THREIE	0x2
+#define RXLIE		0x4
+
+#define IIR_RDA 0x2
+#define IIR_RLS 0x3
+#define IIR_CTI 0x6
+#define FIFO_SIZE 16
+uint8_t gotData = 0;
+char dataChar = 0;
+
+static Buffer rxBuf;
+
+void UART_IRQHandler(void)
+{
+	uint32_t iir;
+	/* read IIR and clear it */
+	iir = LPC_UART->IIR;
+	iir >>= 1; /* skip pending bit in IIR */
+	iir &= 0x07; /* check bit 1~3, interrupt identification */
+	gotData = 1;
+	if (iir == IIR_RDA) // Receive Data Available
+	{
+		char data = LPC_UART->RBR;
+		dataChar = data;
+		// write_uart("I got a char", 12);
+		writeCharToBuf(dataChar, &rxBuf);
+		// write_uart("wrote to rxbuf", 14);
+	} else if (iir == IIR_RLS) {
+		write_uart("error-rls", 9);
+	}
+}
 
 /*------------------------------------------------------------------------*//**
 * \brief main code block
@@ -73,20 +109,44 @@ static void system_init(void);
 
 int main(void)
 {
-	volatile uint32_t count, count_max = 1000000;	// with core frequency ~50MHz this gives ~1.5Hz blinking frequency
 
 	pll_start(CRYSTAL, FREQUENCY);			// start the PLL
 	system_init();							// initialize other necessary elements
+	init_uart();
+	resetBuf(&rxBuf);
+	unsigned int i;
+	// 1. update_display (if new data from serial/spi)
+		// - static image
+		// - binary clock
+		// - animation
+	// 2. drive_LED's
+	// 		-- traverse through linked-list once
+	// 3. update_time
+	//		-- use an interrupt+timer
 
-	LED_GPIO->DIR |= LED;					// set the direction of the LED pin to output
+	blink_led();
+	// char msg[] = "hello world\n";
+	while(1){                    //infinite loop
 
-	while (1)
-	{
-		for (count = 0; count < count_max; count++);	// delay
-		LED_gma = LED;						// instead of LED_GPIO->DATA |= LED;
-		for (count = 0; count < count_max; count++);	// delay
-		LED_gma = 0;						// instead of LED_GPIO->DATA &= ~LED;
-	}
+		// blink_led();
+		if(gotData == 1){
+			gotData = 0;
+			blink_led();
+
+
+			int receivedBytes;
+			receivedBytes = getNumBytesToRead(&rxBuf);
+			
+			write_uart(rxBuf.data, receivedBytes);
+			resetBuf(&rxBuf);
+		
+		}
+
+	  for(i=0; i < 0xFFFFF; ++i);         //simple delay to make scope readings easier to read
+
+  }
+
+	return 0;
 }
 
 /*
@@ -95,6 +155,87 @@ int main(void)
 +=============================================================================+
 */
 
+static void blink_led(void) {
+	volatile uint32_t count, count_max = 1000000;	// with core frequency ~50MHz this gives ~1.5Hz blinking frequency
+
+	LED_GPIO->DIR |= LED;					// set the direction of the LED pin to output
+
+	for (count = 0; count < count_max; count++);	// delay
+	LED_gma = LED;						// instead of LED_GPIO->DATA |= LED;
+	for (count = 0; count < count_max; count++);	// delay
+	LED_gma = 0;						// instead of LED_GPIO->DATA &= ~LED;
+
+}
+
+static void init_uart(void) {
+	//SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
+  LPC_IOCON->PIO1_6             |= 0x01;      //configure UART RXD pin (sec 7.4.40)
+  LPC_IOCON->PIO1_7         |= 0x01;       //configure UART TXD pin (sec. 7.4.41)
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<12);    //enable clock to UART (sec. 3.5.14)
+  LPC_SYSCON->UARTCLKDIV    |= 0x9B;       //0x9B will give approx. 19.2K baud signal (sec. 3.5.16)
+  LPC_UART->FCR             |= 0x01;       //enable UART FIFOs (necessary for operation) (sec. 13.5.6)
+  LPC_UART->LCR             |= 0x03;       //set for 8 bit data width (sec. 13.5.7)
+  LPC_UART->TER             |= 0x80;       //transmit enable (sec. 13.5.16)
+
+  LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
+  NVIC_EnableIRQ(UART_IRQn); // enable UART interrupt
+
+}
+
+#define TEMT (1<<6)
+
+static void write_uart(char* data, uint8_t len){
+  unsigned int i,j, innerLimit;
+	for	(j = 0; j < len; j = j + FIFO_SIZE)
+	{
+		// innerLimit = j > len? (16 -(j - len)) : 16;
+		innerLimit = len - j > FIFO_SIZE ? FIFO_SIZE : len - j;
+		for(i = 0; i < innerLimit; i++) {
+	     LPC_UART->THR |= data[j + i];              //transmit data (sec. 13.5.2)
+	 	}
+	 	while(!(LPC_UART->LSR & TEMT));
+	}
+  LPC_UART->THR |= '\n';
+
+}
+
+// static void read_uart(void){
+// 	unsigned int i = 0;
+// 	unsigned int data;
+// 	while(1){
+//     write_uart("wait", 4);
+// 		for(i=0;i<0xfFFFF;++i);             //arbitrary delay
+// 		while(1){                           //wait for transmitted byte to loop back and be received
+//       if(LPC_UART->LSR & 0x01)        //if Receiver Data Ready bit set (sec 13.5.9)
+//         break;
+// 	  }
+//     data = LPC_UART->RBR;               //store received data (sec 13.5.1)
+// 	  char datac = data;
+// 	  write_uart("got bytes!", 10);
+// 	  write_uart(&datac, 1);
+// 		while(1){                           //wait for transmitted byte to loop back and be received
+//       if(LPC_UART->LSR & 0x01)        //if Receiver Data Ready bit set (sec 13.5.9)
+//         break;
+// 	  }
+// 		data = LPC_UART->RBR;               //store received data (sec 13.5.1)
+// 	  datac = data;
+// 	  write_uart(&datac, 1);
+// 		// while(1){                           //wait for transmitted byte to loop back and be received
+//   //     if(LPC_UART->LSR & 0x01)        //if Receiver Data Ready bit set (sec 13.5.9)
+//   //       break;
+// 	 //  }
+// 		// data = LPC_UART->RBR;               //store received data (sec 13.5.1)
+// 	 //  datac = data;
+// 	 //  write_uart(&datac, 1);
+//
+// 	 //  while(LPC_UART->LSR & 0x01){        //if Receiver Data Ready bit set (sec 13.5.9)
+//   //     data = LPC_UART->RBR;               //store received data (sec 13.5.1)
+// 		//   datac = data;
+// 		//   write_uart("got other byte!", 15);
+// 		//   write_uart(&datac, 1);
+// 		// }
+// 	}
+// }
 /*------------------------------------------------------------------------*//**
 * \brief Configures flash access time.
 * \details Configures flash access time which allows the chip to run at higher
