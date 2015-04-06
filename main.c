@@ -41,6 +41,7 @@
 #include "inc/core_cm0.h"
 #include "config.h"
 #include "buffer.h"
+#include "uart.h"
 #include "hdr/hdr_syscon.h"
 
 /*
@@ -59,10 +60,7 @@ static void flash_access_time(uint32_t frequency);
 static uint32_t pll_start(uint32_t crystal, uint32_t frequency);
 static void init_system(void);
 static void blink_led(void);
-static void init_uart(void);
 static void init_spi(void);
-static void write_uart(char* data, uint8_t len);
-// static void read_uart(void);
 /*
 +=============================================================================+
 | global functions
@@ -78,34 +76,13 @@ static void write_uart(char* data, uint8_t len);
 #define IIR_CTI 0x6
 #define FIFO_SIZE 16
 uint8_t gotDataSerial = 0;
-char dataChar = 0;
 
-static Buffer rxBuf;
 
-void UART_IRQHandler(void)
-{
-	uint32_t iir;
-	/* read IIR and clear it */
-	iir = LPC_UART->IIR;
-	iir >>= 1; /* skip pending bit in IIR */
-	iir &= 0x07; /* check bit 1~3, interrupt identification */
-	gotDataSerial = 1;
-	if (iir == IIR_RDA) // Receive Data Available
-	{
-		char data = LPC_UART->RBR;
-		dataChar = data;
-		// write_uart("I got a char", 12);
-		writeCharToBuf(dataChar, &rxBuf);
-		// write_uart("wrote to rxbuf", 14);
-	} else if (iir == IIR_RLS) {
-		write_uart("error-rls", 9);
-	}
-}
+volatile Buffer rxBuf = {.end=0, .readStart=0};
 
 /*------------------------------------------------------------------------*//**
 * \brief main code block
-* \details Call some static initialization functions and blink the led with
-* frequency defined via count_max variable.
+* \details 
 *//*-------------------------------------------------------------------------*/
 
 // 1. update_display (if new data from serial/spi)
@@ -126,19 +103,23 @@ int main(void)
 	init_spi();
 	resetBuf(&rxBuf);
 	unsigned int i;
+	char x;
 	
-	blink_led();
-	// char msg[] = "hello world\n";
+//	blink_led();
 	while(1){                    //infinite loop
 
-		// blink_led();
-		if(gotDataSerial == 1){
+	//	blink_led();
+		gotDataSerial = getNumBytesToRead(&rxBuf);
+		// write_uart("bytes received:", 15);
+		// x = '0' + gotDataSerial;
+		// write_uart(&x, 1);
+		if(gotDataSerial > 0){
 			gotDataSerial = 0;
-			blink_led();
-
+		//	blink_led();
+			// write_uart("reading bytes", 13);
 			int receivedBytes;
 			receivedBytes = getNumBytesToRead(&rxBuf);
-			
+			// write_uart("received successfully!", 22);
 			write_uart(rxBuf.data, receivedBytes);
 			resetBuf(&rxBuf);
 			LPC_SSP0->DR = 0x4741;
@@ -170,20 +151,6 @@ static void blink_led(void) {
 
 }
 
-static void init_uart(void) {
-	//SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
-  LPC_IOCON->PIO1_6             |= 0x01;      //configure UART RXD pin (sec 7.4.40)
-  LPC_IOCON->PIO1_7         |= 0x01;       //configure UART TXD pin (sec. 7.4.41)
-  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<12);    //enable clock to UART (sec. 3.5.14)
-  LPC_SYSCON->UARTCLKDIV    |= 0x9B;       //0x9B will give approx. 19.2K baud signal (sec. 3.5.16)
-  LPC_UART->FCR             |= 0x01;       //enable UART FIFOs (necessary for operation) (sec. 13.5.6)
-  LPC_UART->LCR             |= 0x03;       //set for 8 bit data width (sec. 13.5.7)
-  LPC_UART->TER             |= 0x80;       //transmit enable (sec. 13.5.16)
-
-  LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
-  NVIC_EnableIRQ(UART_IRQn); // enable UART interrupt
-
-}
 
 static void init_spi(void) {
 	//SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
@@ -209,22 +176,7 @@ static void init_spi(void) {
 
 }
 
-#define TEMT (1<<6)
 
-static void write_uart(char* data, uint8_t len){
-  unsigned int i,j, innerLimit;
-	for	(j = 0; j < len; j = j + FIFO_SIZE)
-	{
-		// innerLimit = j > len? (16 -(j - len)) : 16;
-		innerLimit = len - j > FIFO_SIZE ? FIFO_SIZE : len - j;
-		for(i = 0; i < innerLimit; i++) {
-	     LPC_UART->THR |= data[j + i];              //transmit data (sec. 13.5.2)
-	 	}
-	 	while(!(LPC_UART->LSR & TEMT));
-	}
-  LPC_UART->THR |= '\n';
-
-}
 /*------------------------------------------------------------------------*//**
 * \brief Configures flash access time.
 * \details Configures flash access time which allows the chip to run at higher
