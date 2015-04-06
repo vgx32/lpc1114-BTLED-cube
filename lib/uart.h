@@ -1,5 +1,4 @@
 
-
 #ifndef __UART
 #define __UART
 
@@ -12,4 +11,4 @@ void init_uart(void);
 void write_uart(char* data, uint8_t len);
 
 
-#endif __UART
+#endif

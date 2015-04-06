@@ -1,7 +1,7 @@
 
-#include "../inc/LPC11xx.h"
+#include "inc/LPC11xx.h"
+#include "inc/core_cm0.h"
 #include "buffer.h"
-#include "../inc/core_cm0.h"
 #include "uart.h"
 
 

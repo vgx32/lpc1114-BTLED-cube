@@ -42,6 +42,7 @@
 #include "config.h"
 #include "buffer.h"
 #include "uart.h"
+#include "ssp.h"
 #include "hdr/hdr_syscon.h"
 
 /*
@@ -60,7 +61,7 @@ static void flash_access_time(uint32_t frequency);
 static uint32_t pll_start(uint32_t crystal, uint32_t frequency);
 static void init_system(void);
 static void blink_led(void);
-static void init_spi(void);
+// static void init_ssp(void);
 /*
 +=============================================================================+
 | global functions
@@ -100,10 +101,10 @@ int main(void)
 	pll_start(CRYSTAL, FREQUENCY);			// start the PLL
 	init_system();							// initialize other necessary elements
 	init_uart();
-	init_spi();
+	init_ssp();
 	resetBuf(&rxBuf);
 	unsigned int i;
-	char x;
+	// char x;
 	
 //	blink_led();
 	while(1){                    //infinite loop
@@ -115,7 +116,7 @@ int main(void)
 		// write_uart(&x, 1);
 		if(gotDataSerial > 0){
 			gotDataSerial = 0;
-		//	blink_led();
+			blink_led();
 			// write_uart("reading bytes", 13);
 			int receivedBytes;
 			receivedBytes = getNumBytesToRead(&rxBuf);
@@ -152,29 +153,29 @@ static void blink_led(void) {
 }
 
 
-static void init_spi(void) {
-	//SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
-  LPC_IOCON->PIO0_8         |= 0x01;      // MISO0
-  LPC_IOCON->PIO0_9         |= 0x01;      // MOSI0
-	LPC_IOCON->SWCLK_PIO0_10  |= 0x02;      // SCK0 *- IOCON_SCK0_LOC dependent(reset value selects PIO0_10)
+// static void init_ssp(void) {
+// 	//SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
+//   LPC_IOCON->PIO0_8         |= 0x01;      // MISO0
+//   LPC_IOCON->PIO0_9         |= 0x01;      // MOSI0
+// 	LPC_IOCON->SWCLK_PIO0_10  |= 0x02;      // SCK0 *- IOCON_SCK0_LOC dependent(reset value selects PIO0_10)
 
 
-  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<11) | (1<<18);    //enable clock to SPI0 & SPI1
+//   LPC_SYSCON->SYSAHBCLKCTRL |= (1<<11) | (1<<18);    //enable clock to SPI0 & SPI1
 
-  LPC_SYSCON->SSP0CLKDIV    |= 200;   // divide main clock by 100 (50MHz in this file) = 500kHz
-  																			// max sck on the nrF8001 is 3MHz
-	LPC_SYSCON->PRESETCTRL  	|= 1; 		//de-assert SPI reset
+//   LPC_SYSCON->SSP0CLKDIV    |= 200;   // divide main clock by 100 (50MHz in this file) = 500kHz
+//   																			// max sck on the nrF8001 is 3MHz
+// 	LPC_SYSCON->PRESETCTRL  	|= 1; 		//de-assert SPI reset
   	
-	LPC_SSP0->CR0 						= 0xf; 	// DSS = 16-bit data transfer
-	// LPC_SSP0->CR0 						= 0x0707; 	// DSS = 8-bit data transfer
+// 	LPC_SSP0->CR0 						= 0xf; 	// DSS = 16-bit data transfer
+// 	// LPC_SSP0->CR0 						= 0x0707; 	// DSS = 8-bit data transfer
 
-	LPC_SSP0->CPSR					  |= 0x16;
-	LPC_SSP0->CR1 						|= (1 << 1); // spi control enable
+// 	LPC_SSP0->CPSR					  |= 0x16;
+// 	LPC_SSP0->CR1 						|= (1 << 1); // spi control enable
  
-  // LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
-  // NVIC_EnableIRQ(UART_IRQn); // enable UART interrupt
+//   // LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
+//   // NVIC_EnableIRQ(UART_IRQn); // enable UART interrupt
 
-}
+// }
 
 
 /*------------------------------------------------------------------------*//**
