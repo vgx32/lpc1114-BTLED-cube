@@ -24,7 +24,7 @@
 * available local functions:
 * 	static void flash_access_time(uint32_t frequency)
 * 	static uint32_t pll_start(uint32_t crystal, uint32_t frequency)
-* 	static void system_init(void)
+* 	static void init_system(void)
 *
 * available interrupt handlers:
 ******************************************************************************/
@@ -57,9 +57,10 @@
 
 static void flash_access_time(uint32_t frequency);
 static uint32_t pll_start(uint32_t crystal, uint32_t frequency);
-static void system_init(void);
+static void init_system(void);
 static void blink_led(void);
 static void init_uart(void);
+static void init_spi(void);
 static void write_uart(char* data, uint8_t len);
 // static void read_uart(void);
 /*
@@ -76,7 +77,7 @@ static void write_uart(char* data, uint8_t len);
 #define IIR_RLS 0x3
 #define IIR_CTI 0x6
 #define FIFO_SIZE 16
-uint8_t gotData = 0;
+uint8_t gotDataSerial = 0;
 char dataChar = 0;
 
 static Buffer rxBuf;
@@ -88,7 +89,7 @@ void UART_IRQHandler(void)
 	iir = LPC_UART->IIR;
 	iir >>= 1; /* skip pending bit in IIR */
 	iir &= 0x07; /* check bit 1~3, interrupt identification */
-	gotData = 1;
+	gotDataSerial = 1;
 	if (iir == IIR_RDA) // Receive Data Available
 	{
 		char data = LPC_UART->RBR;
@@ -107,15 +108,7 @@ void UART_IRQHandler(void)
 * frequency defined via count_max variable.
 *//*-------------------------------------------------------------------------*/
 
-int main(void)
-{
-
-	pll_start(CRYSTAL, FREQUENCY);			// start the PLL
-	system_init();							// initialize other necessary elements
-	init_uart();
-	resetBuf(&rxBuf);
-	unsigned int i;
-	// 1. update_display (if new data from serial/spi)
+// 1. update_display (if new data from serial/spi)
 		// - static image
 		// - binary clock
 		// - animation
@@ -124,25 +117,35 @@ int main(void)
 	// 3. update_time
 	//		-- use an interrupt+timer
 
+int main(void)
+{
+
+	pll_start(CRYSTAL, FREQUENCY);			// start the PLL
+	init_system();							// initialize other necessary elements
+	init_uart();
+	init_spi();
+	resetBuf(&rxBuf);
+	unsigned int i;
+	
 	blink_led();
 	// char msg[] = "hello world\n";
 	while(1){                    //infinite loop
 
 		// blink_led();
-		if(gotData == 1){
-			gotData = 0;
+		if(gotDataSerial == 1){
+			gotDataSerial = 0;
 			blink_led();
-
 
 			int receivedBytes;
 			receivedBytes = getNumBytesToRead(&rxBuf);
 			
 			write_uart(rxBuf.data, receivedBytes);
 			resetBuf(&rxBuf);
-		
+			LPC_SSP0->DR = 0x4741;
+
 		}
 
-	  for(i=0; i < 0xFFFFF; ++i);         //simple delay to make scope readings easier to read
+	  for(i=0; i < 0xFFFFF; ++i);         // delay to make scope readings easier to read
 
   }
 
@@ -182,6 +185,30 @@ static void init_uart(void) {
 
 }
 
+static void init_spi(void) {
+	//SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
+  LPC_IOCON->PIO0_8         |= 0x01;      // MISO0
+  LPC_IOCON->PIO0_9         |= 0x01;      // MOSI0
+	LPC_IOCON->SWCLK_PIO0_10  |= 0x02;      // SCK0 *- IOCON_SCK0_LOC dependent(reset value selects PIO0_10)
+
+
+  LPC_SYSCON->SYSAHBCLKCTRL |= (1<<11) | (1<<18);    //enable clock to SPI0 & SPI1
+
+  LPC_SYSCON->SSP0CLKDIV    |= 200;   // divide main clock by 100 (50MHz in this file) = 500kHz
+  																			// max sck on the nrF8001 is 3MHz
+	LPC_SYSCON->PRESETCTRL  	|= 1; 		//de-assert SPI reset
+  	
+	LPC_SSP0->CR0 						= 0xf; 	// DSS = 16-bit data transfer
+	// LPC_SSP0->CR0 						= 0x0707; 	// DSS = 8-bit data transfer
+
+	LPC_SSP0->CPSR					  |= 0x16;
+	LPC_SSP0->CR1 						|= (1 << 1); // spi control enable
+ 
+  // LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
+  // NVIC_EnableIRQ(UART_IRQn); // enable UART interrupt
+
+}
+
 #define TEMT (1<<6)
 
 static void write_uart(char* data, uint8_t len){
@@ -198,44 +225,6 @@ static void write_uart(char* data, uint8_t len){
   LPC_UART->THR |= '\n';
 
 }
-
-// static void read_uart(void){
-// 	unsigned int i = 0;
-// 	unsigned int data;
-// 	while(1){
-//     write_uart("wait", 4);
-// 		for(i=0;i<0xfFFFF;++i);             //arbitrary delay
-// 		while(1){                           //wait for transmitted byte to loop back and be received
-//       if(LPC_UART->LSR & 0x01)        //if Receiver Data Ready bit set (sec 13.5.9)
-//         break;
-// 	  }
-//     data = LPC_UART->RBR;               //store received data (sec 13.5.1)
-// 	  char datac = data;
-// 	  write_uart("got bytes!", 10);
-// 	  write_uart(&datac, 1);
-// 		while(1){                           //wait for transmitted byte to loop back and be received
-//       if(LPC_UART->LSR & 0x01)        //if Receiver Data Ready bit set (sec 13.5.9)
-//         break;
-// 	  }
-// 		data = LPC_UART->RBR;               //store received data (sec 13.5.1)
-// 	  datac = data;
-// 	  write_uart(&datac, 1);
-// 		// while(1){                           //wait for transmitted byte to loop back and be received
-//   //     if(LPC_UART->LSR & 0x01)        //if Receiver Data Ready bit set (sec 13.5.9)
-//   //       break;
-// 	 //  }
-// 		// data = LPC_UART->RBR;               //store received data (sec 13.5.1)
-// 	 //  datac = data;
-// 	 //  write_uart(&datac, 1);
-//
-// 	 //  while(LPC_UART->LSR & 0x01){        //if Receiver Data Ready bit set (sec 13.5.9)
-//   //     data = LPC_UART->RBR;               //store received data (sec 13.5.1)
-// 		//   datac = data;
-// 		//   write_uart("got other byte!", 15);
-// 		//   write_uart(&datac, 1);
-// 		// }
-// 	}
-// }
 /*------------------------------------------------------------------------*//**
 * \brief Configures flash access time.
 * \details Configures flash access time which allows the chip to run at higher
@@ -327,7 +316,7 @@ static uint32_t pll_start(uint32_t crystal, uint32_t frequency)
 * \details Enables clock for IO configuration block.
 *//*-------------------------------------------------------------------------*/
 
-static void system_init(void)
+static void init_system(void)
 {
 	LPC_SYSCON->SYSAHBCLKCTRL |= SYSAHBCLKCTRL_IOCON;	// enable clock for IO configuration block
 }
