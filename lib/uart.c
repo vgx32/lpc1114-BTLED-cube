@@ -5,7 +5,7 @@
 #include "uart.h"
 
 
-extern Buffer rxBuf;
+static Buffer* rxBuf;
 
 
 #define RBRIE   0x1
@@ -30,7 +30,7 @@ void UART_IRQHandler(void)
   {
     char data = LPC_UART->RBR;
     dataChar = data;
-    writeCharToBuf(dataChar, &rxBuf);
+    writeCharToBuf(dataChar, rxBuf);
     
   
   } else if (iir == IIR_RLS) {
@@ -39,7 +39,7 @@ void UART_IRQHandler(void)
 }
 
 
-void init_uart(void) {
+void init_uart(Buffer* buf) {
   //SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
   LPC_IOCON->PIO1_6             |= 0x01;      //configure UART RXD pin (sec 7.4.40)
   LPC_IOCON->PIO1_7         |= 0x01;       //configure UART TXD pin (sec. 7.4.41)
@@ -52,7 +52,10 @@ void init_uart(void) {
   LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
   NVIC_EnableIRQ(UART_IRQn); // enable UART interrupt
 
+  rxBuf = buf;
+
 }
+
 
 void write_uart_len(char* data, uint8_t len){
   unsigned int i,j, innerLimit;
