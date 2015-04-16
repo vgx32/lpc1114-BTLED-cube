@@ -24,7 +24,7 @@
 typedef struct {
   char data[BUF_SIZE];
   unsigned int end;
-  unsigned int readStart;
+  unsigned int start;
 } Buffer;
 
 
@@ -32,6 +32,7 @@ void resetBuf(Buffer* buf);
 
 void writeCharToBuf(char c, Buffer* buf);
 
+// reads a single char out of buf, incrementing the start ptr
 char readBuf(Buffer* buf);
 
 int getNumBytesToRead(Buffer* buf);

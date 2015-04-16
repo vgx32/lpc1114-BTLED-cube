@@ -2,7 +2,7 @@
 
 void resetBuf(Buffer* buf) {
   buf->end =0;
-  buf->readStart = 0;
+  buf->start = 0;
 }
 
 // #pragma registerbank(1)
@@ -16,17 +16,17 @@ void writeCharToBuf(char c, Buffer* buf) {
 
 char readBuf(Buffer* buf) {
   char result;
-  result = buf->data[buf->readStart];
-  buf->readStart++;
-  if(buf->readStart >= BUF_SIZE) {
-    buf->readStart = 0;
+  result = buf->data[buf->start];
+  buf->start++;
+  if(buf->start >= BUF_SIZE) {
+    buf->start = 0;
   }
   return result;
 }
 
 int getNumBytesToRead(Buffer* buf) {
-  if(buf->end >= buf->readStart) {
-    return buf->end - buf->readStart;
+  if(buf->end >= buf->start) {
+    return buf->end - buf->start;
   } else {
     return 0;
   }
