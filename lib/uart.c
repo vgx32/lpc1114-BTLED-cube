@@ -34,7 +34,7 @@ void UART_IRQHandler(void)
     
   
   } else if (iir == IIR_RLS) {
-    write_uart("error-rls", 9);
+    write_uart("error-rls");
   }
 }
 
@@ -54,16 +54,29 @@ void init_uart(void) {
 
 }
 
-void write_uart(char* data, uint8_t len){
+void write_uart_len(char* data, uint8_t len){
   unsigned int i,j, innerLimit;
-  for (j = 0; j < len; j = j + FIFO_SIZE)
+  for (j = 0; j < len; j = j + FIFO_SIZE + 1)
   {
-    // innerLimit = j > len? (16 -(j - len)) : 16;
+    // write FIFO size chunks into the uart
     innerLimit = len - j > FIFO_SIZE ? FIFO_SIZE : len - j;
     for(i = 0; i < innerLimit; i++) {
        LPC_UART->THR |= data[j + i];              //transmit data (sec. 13.5.2)
     }
     while(!(LPC_UART->LSR & TEMT));
   }
+  LPC_UART->THR |= '\n';
+}
+
+
+void write_uart(char* data){
+  unsigned int i;
+    while(*data){
+      for(i = 0; i < 16 && *data; i++) {
+        LPC_UART->THR = *data;              //transmit data (sec. 13.5.2)
+        data++;
+      }
+      while(!(LPC_UART->LSR & TEMT));
+    }
   LPC_UART->THR |= '\n';
 }
