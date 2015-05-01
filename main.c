@@ -46,21 +46,21 @@
 #include "hdr/hdr_syscon.h"
 
 // porting ACI ble library
-#include "ble/aci.h"
-#include "ble/aci_cmds.h"
-#include "ble/aci_evts.h"
-#include "ble/dtm.h"
-#include "ble/services.h"
-#include "ble/acilib.h"
-#include "ble/acilib_if.h"
-#include "ble/aci_protocol_defines.h"
+#include "ble/aci.h"		// enums and defines for nrf-specific config constants
+#include "ble/aci_cmds.h" // command code enums
+#include "ble/aci_evts.h" // event code enums
+#include "ble/dtm.h" // BTLE -specific direct test mode constant definitions
+#include "ble/services.h" // configuration ARRAY from Nordic's nRFGo studio program -- sent to radio at init
+#include "ble/acilib.h" // defines for packing buffers with ACI message format
+#include "ble/acilib_if.h" // function prototypes for above
+#include "ble/aci_protocol_defines.h" // ACI offset definitions for acilib
+#include "ble/hal_platform.h" // functions specific to Arduino & PIC *** TODO unsure if necessary for LPC1114 
 
 // TODO: im(port) the following to project or determine if unnnecessary
-// #include "ble/aci_queue.h"
-// #include "ble/hal_aci_tl.h"
-// #include "ble/common.h"
-// #include "ble/hal_platform.h"
-// #include "ble/lib_aci.h"
+// #include "ble/aci_queue.h" // a queue implementation.. ** TODO: analyze how this code is used with lib_aci and aci_tl
+// #include "ble/hal_aci_tl.h" // (big refactoring) has the SPI data read interrupt and radio init function
+// #include "ble/common.h" // PIC-specific pin control defs. TODO: port from PIC to LPC
+// #include "ble/lib_aci.h" // (big refactoring) library used by ble application (uart mode) ***lots of bools ***
 
 
 static void flash_access_time(uint32_t frequency);
