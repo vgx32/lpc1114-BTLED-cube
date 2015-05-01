@@ -45,23 +45,29 @@
 #include "ssp.h"
 #include "hdr/hdr_syscon.h"
 
-/*
-+=============================================================================+
-| module variables
-+=============================================================================+
-*/
+// porting ACI ble library
+#include "ble/aci.h"
+#include "ble/aci_cmds.h"
+#include "ble/aci_evts.h"
+#include "ble/dtm.h"
+#include "ble/services.h"
+#include "ble/acilib.h"
+#include "ble/acilib_if.h"
+#include "ble/aci_protocol_defines.h"
 
-/*
-+=============================================================================+
-| local functions' declarations
-+=============================================================================+
-*/
+// TODO: im(port) the following to project or determine if unnnecessary
+// #include "ble/aci_queue.h"
+// #include "ble/hal_aci_tl.h"
+// #include "ble/common.h"
+// #include "ble/hal_platform.h"
+// #include "ble/lib_aci.h"
+
 
 static void flash_access_time(uint32_t frequency);
 static uint32_t pll_start(uint32_t crystal, uint32_t frequency);
 static void init_system(void);
 static void blink_led(void);
-// static void init_ssp(void);
+
 /*
 +=============================================================================+
 | global functions
@@ -76,10 +82,9 @@ static void blink_led(void);
 #define IIR_RLS 0x3
 #define IIR_CTI 0x6
 #define FIFO_SIZE 16
-uint8_t gotDataSerial = 0;
 
 
-volatile Buffer rxBuf = {.end=0, .readStart=0};
+static Buffer rxBuf = {.end=0, .start=0};
 
 /*------------------------------------------------------------------------*//**
 * \brief main code block
@@ -100,30 +105,24 @@ int main(void)
 
 	pll_start(CRYSTAL, FREQUENCY);			// start the PLL
 	init_system();							// initialize other necessary elements
-	init_uart();
-	init_ssp();
 	resetBuf(&rxBuf);
-	unsigned int i;
-	// char x;
-	
-//	blink_led();
-	while(1){                    //infinite loop
 
-	//	blink_led();
-		gotDataSerial = getNumBytesToRead(&rxBuf);
-		// write_uart("bytes received:", 15);
-		// x = '0' + gotDataSerial;
-		// write_uart(&x, 1);
-		if(gotDataSerial > 0){
-			gotDataSerial = 0;
+	init_uart(&rxBuf);
+	init_ssp();
+	unsigned int i;
+
+	blink_led();
+	int uartRXBytes = 0;
+
+	while(1){                    //infinite loop
+		uartRXBytes = getNumBytesToRead(&rxBuf);
+		if(uartRXBytes > 0){
 			blink_led();
-			// write_uart("reading bytes", 13);
-			int receivedBytes;
-			receivedBytes = getNumBytesToRead(&rxBuf);
-			// write_uart("received successfully!", 22);
-			write_uart(rxBuf.data, receivedBytes);
+
+			write_uart_len(rxBuf.data, uartRXBytes);
 			resetBuf(&rxBuf);
-			LPC_SSP0->DR = 0x4741;
+
+			test_ssp();
 
 		}
 
@@ -140,6 +139,12 @@ int main(void)
 +=============================================================================+
 */
 
+// #define LED_GPIO							LPC_GPIO1	///< GPIO port to which the LED is connected
+// #define LED_pin								8			///< pin number of the LED
+
+// #define LED									(1 << LED_pin)
+
+
 static void blink_led(void) {
 	volatile uint32_t count, count_max = 1000000;	// with core frequency ~50MHz this gives ~1.5Hz blinking frequency
 
@@ -151,31 +156,6 @@ static void blink_led(void) {
 	LED_gma = 0;						// instead of LED_GPIO->DATA &= ~LED;
 
 }
-
-
-// static void init_ssp(void) {
-// 	//SET UP UART (sec. 13.2 in datasheet "BASIC CONFIGURATION")
-//   LPC_IOCON->PIO0_8         |= 0x01;      // MISO0
-//   LPC_IOCON->PIO0_9         |= 0x01;      // MOSI0
-// 	LPC_IOCON->SWCLK_PIO0_10  |= 0x02;      // SCK0 *- IOCON_SCK0_LOC dependent(reset value selects PIO0_10)
-
-
-//   LPC_SYSCON->SYSAHBCLKCTRL |= (1<<11) | (1<<18);    //enable clock to SPI0 & SPI1
-
-//   LPC_SYSCON->SSP0CLKDIV    |= 200;   // divide main clock by 100 (50MHz in this file) = 500kHz
-//   																			// max sck on the nrF8001 is 3MHz
-// 	LPC_SYSCON->PRESETCTRL  	|= 1; 		//de-assert SPI reset
-  	
-// 	LPC_SSP0->CR0 						= 0xf; 	// DSS = 16-bit data transfer
-// 	// LPC_SSP0->CR0 						= 0x0707; 	// DSS = 8-bit data transfer
-
-// 	LPC_SSP0->CPSR					  |= 0x16;
-// 	LPC_SSP0->CR1 						|= (1 << 1); // spi control enable
- 
-//   // LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
-//   // NVIC_EnableIRQ(UART_IRQn); // enable UART interrupt
-
-// }
 
 
 /*------------------------------------------------------------------------*//**

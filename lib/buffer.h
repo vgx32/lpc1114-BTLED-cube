@@ -35,6 +35,9 @@ void writeCharToBuf(char c, Buffer* buf);
 // reads a single char out of buf, incrementing the start ptr
 char readBuf(Buffer* buf);
 
+// returns the char at the front of the buffer, without incrementing start
+char peekBuf(Buffer* buf);
+
 int getNumBytesToRead(Buffer* buf);
 
 #endif

@@ -48,7 +48,7 @@ AS_DEFS =
 
 # include directories (absolute or relative paths to additional folders with
 # headers, current folder is always included)
-INC_DIRS = ./lib
+INC_DIRS = ./lib ./lib/ble
 
 # library directories (absolute or relative paths to additional folders with
 # libraries)

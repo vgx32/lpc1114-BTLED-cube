@@ -16,12 +16,16 @@ void writeCharToBuf(char c, Buffer* buf) {
 
 char readBuf(Buffer* buf) {
   char result;
-  result = buf->data[buf->start];
+  result = peekBuf(buf);
   buf->start++;
   if(buf->start >= BUF_SIZE) {
     buf->start = 0;
   }
   return result;
+}
+
+char peekBuf(Buffer* buf) {
+  return buf->data[buf->start];
 }
 
 int getNumBytesToRead(Buffer* buf) {
