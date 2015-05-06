@@ -23,7 +23,7 @@ void init_ssp(void) {
   LPC_IOCON->PIO0_9         |= 0x01;      // MOSI0
   LPC_IOCON->SWCLK_PIO0_10  |= 0x02;      // SCK0 *- IOCON_SCK0_LOC dependent(reset value selects PIO0_10)
                               
-                              // use PIO0_3 to listen for RDYn signal on nrf8001
+                              // use PIO0_11 to listen for RDYn signal on nrf8001
   LPC_GPIO0->DIR            |= (1 << 5); // PIO0_5 is REQ_N/output
   LPC_GPIO0->DATA           |= (1 << 5);
   LPC_GPIO0->DIR            |= (1 << 6); // PIO0_6 is RESET control

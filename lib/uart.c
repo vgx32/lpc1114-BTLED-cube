@@ -75,7 +75,7 @@ void write_uart_len(char* data, uint8_t len){
 void write_uart(char* data){
   unsigned int i;
     while(*data){
-      for(i = 0; i < 16 && *data; i++) {
+      for(i = 0; i < 15 && *data; i++) {
         LPC_UART->THR = *data;              //transmit data (sec. 13.5.2)
         data++;
       }
