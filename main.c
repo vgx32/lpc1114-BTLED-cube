@@ -55,10 +55,11 @@
 #include "ble/acilib_if.h" // function prototypes for above
 #include "ble/aci_protocol_defines.h" // ACI offset definitions for acilib
 #include "ble/hal_platform.h" // functions specific to Arduino & PIC *** TODO unsure if necessary for LPC1114 
+#include "ble/hal_aci_tl.h" // (big refactoring) has the SPI data read interrupt and radio init function
+
 
 // TODO: im(port) the following to project or determine if unnnecessary
 // #include "ble/aci_queue.h" // a queue implementation.. ** TODO: analyze how this code is used with lib_aci and aci_tl
-// #include "ble/hal_aci_tl.h" // (big refactoring) has the SPI data read interrupt and radio init function
 // #include "ble/common.h" // PIC-specific pin control defs. TODO: port from PIC to LPC
 // #include "ble/lib_aci.h" // (big refactoring) library used by ble application (uart mode) ***lots of bools ***
 
@@ -121,6 +122,26 @@ void init_rdyn(void) {
   
 }
 
+static void delay_us(uint32_t duration) {
+	volatile uint32_t count_max = FREQUENCY/10000;	// 1ms... approximately
+	uint32_t i, us;
+	
+	for (us = 0; us < duration; us++) {
+		for(i = 0; i < count_max; i++); // 1ms count
+	}
+}
+
+
+static void delay_ms(uint32_t duration) {
+	volatile uint32_t count_max = FREQUENCY/10000;	// 1ms... approximately
+	uint32_t i, ms;
+	
+	for (ms = 0; ms < duration; ms++) {
+		for(i = 0; i < count_max; i++); // 1ms count
+	}
+}
+
+
 int main(void)
 {
 
@@ -150,6 +171,7 @@ int main(void)
 
 		// }
 		// write_uart("waiting for GPIO interrupt");
+		blink_led();
 		if(rdy_int) {
 			write_uart("gpio interrupt fired");
 			blink_led();
@@ -176,13 +198,12 @@ int main(void)
 
 
 static void blink_led(void) {
-	volatile uint32_t count, count_max = 1000000;	// with core frequency ~50MHz this gives ~1.5Hz blinking frequency
-
+	
 	LED_GPIO->DIR |= LED;					// set the direction of the LED pin to output
-
-	for (count = 0; count < count_max; count++);	// delay
+	delay_ms(500);
 	LED_gma = LED;						// instead of LED_GPIO->DATA |= LED;
-	for (count = 0; count < count_max; count++);	// delay
+	delay_ms(500);
+	
 	LED_gma = 0;						// instead of LED_GPIO->DATA &= ~LED;
 
 }
