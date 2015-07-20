@@ -12,9 +12,7 @@
 
 
 /*
-PIC32 supports only MSbit transfer on SPI and the nRF8001 uses LSBit
-Use the REVERSE_BITS macro to convert from MSBit to LSBit
-The outgoing command and the incoming event needs to be converted
+nRF8001 uses LSBit SPI format
  */
 
 static bool volatile sending_data = false;

@@ -21,6 +21,7 @@ OBJDUMP = $(TOOLCHAIN)objdump
 SIZE = $(TOOLCHAIN)size
 RM = rm -f
 
+
 #=============================================================================#
 # project configuration
 #=============================================================================#
@@ -284,9 +285,14 @@ make_output_dir :
 # flash hex onto chip
 #-----------------------------------------------------------------------------#
 
-flash : $(HEX)
-	../lpc21isp/lpc21isp $(HEX) /dev/ttyUSB0 115200 120000
+FLASHMODE_ON = python ../flasher/flashctrl.py 'f'
+FLASHCOMMAND = ../lpc21isp/lpc21isp $(HEX) /dev/ttyUSB1 115200 120000
+FLASHMODE_OFF = python ../flasher/flashctrl.py 'r'
 
+flash : $(HEX)
+	$(FLASHMODE_ON)
+	$(FLASHCOMMAND)
+	$(FLASHMODE_OFF)
 
 #=============================================================================#
 # make clean
