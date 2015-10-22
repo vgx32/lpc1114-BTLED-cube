@@ -113,7 +113,7 @@ void PIOINT0_IRQHandler(void) {
 
 
 void init_rdyn(void) {
-	LPC_GPIO0->IE |= RDYnBIT; 
+  LPC_GPIO0->IE |= RDYnBIT; 
 
 
 	// LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
@@ -171,7 +171,7 @@ int main(void)
 
 		// }
 		// write_uart("waiting for GPIO interrupt");
-		blink_led();
+		// blink_led();
 		if(rdy_int) {
 			write_uart("gpio interrupt fired");
 			blink_led();
