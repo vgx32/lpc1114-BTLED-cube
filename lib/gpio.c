@@ -39,12 +39,6 @@ LPC_GPIO_TypeDef* gpio_port(uint8_t port) {
         case 1:
             return LPC_GPIO1;
             break;
-        case 2:
-            return LPC_GPIO2;
-            break;
-        case 3:
-            return LPC_GPIO3;
-            break;
         default:
             return 0;
     }
@@ -54,43 +48,40 @@ static IntHandler gpioInt;
 
 static IntHandler gpio0_handler;
 static IntHandler gpio1_handler;
-static IntHandler gpio2_handler;
-static IntHandler gpio3_handler;
 
 void PIOINT0_IRQHandler(void) {
     gpio0_handler();
+    LPC_GPIO0->IC |= 0xfff;
+    __NOP;
+    __NOP;
 }
+
+void PIOINT1_IRQHandler(void) {
+    gpio1_handler();
+    LPC_GPIO1->IC |= 0xfff;
+    __NOP;
+    __NOP;
+}
+
 
 void gpio_setup_int(uint8_t port, uint8_t pin, uint8_t enable, IntHandler h) {
     LPC_GPIO_TypeDef* gport = gpio_port(port);
     if (gport) {
         set_bit(&gport->IE, pin, enable);
-        NVIC_EnableIRQ(EINT0_IRQn); // enable GPIO0 interrupt    
-        gpio0_handler = h;
                 
-        // switch (port) {
-        //     case 0:
-        //         NVIC_EnableIRQ(EINT0_IRQn); // enable GPIO0 interrupt    
-        //         gpio0_handler = h;
-        //         break;
-        //     case 1:
-        //         NVIC_EnableIRQ(EINT1_IRQn); // enable GPIO0 interrupt    
-        //         gpio1_handler = h;
-        //         break;
-        //     case 2:
-        //         NVIC_EnableIRQ(EINT2_IRQn); // enable GPIO0 interrupt    
-        //         gpio2_handler = h;
-        //         break;
-        //     case 3:
-        //         NVIC_EnableIRQ(EINT3_IRQn); // enable GPIO0 interrupt    
-        //         gpio3_handler = h;
-        //         break;
-        //     default:
-        //         break;
-        //         // NVIC_EnableIRQ(EINT0_IRQn); // enable GPIO0 interrupt    
-
-        // }
-        
+        switch (port) {
+            case 0:
+                NVIC_EnableIRQ(EINT0_IRQn); // enable GPIO0 interrupt    
+                gpio0_handler = h;
+                break;
+            case 1:
+                NVIC_EnableIRQ(EINT1_IRQn); // enable GPIO0 interrupt    
+                gpio1_handler = h;
+                write_uart("setup_port0 int");
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -107,8 +98,8 @@ void gpio_write(uint8_t port, uint8_t pin, uint8_t value) {
 LPC_GPIO_TypeDef* gport = gpio_port(port);
     if (gport && (get_bit(&gport->DIR, pin)))
     {
-            // direction is output
-            set_bit(&gport->DATA, pin, value);
+        // direction is output
+        set_bit(&gport->DATA, pin, value);
     }
 }
 

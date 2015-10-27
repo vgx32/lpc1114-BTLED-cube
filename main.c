@@ -102,31 +102,11 @@ static Buffer rxBuf = {.end=0, .start=0};
 	// 3. update_time
 	//		-- use an interrupt+timer
 
-#define RDYnBIT (1<<11)
-
-// #define GPORTN(x)  LPC_GPIO ## #x 
 static volatile char rdy_int = 0;
 void my_test_interrupt(void) {
-	// int32_t ie = LPC_GPIO0->IE;
 	rdy_int = 1;
-	
-	// LPC_GPIO0->IC |= 0xff;
-	LPC_GPIO0->IC |= RDYnBIT;
-	__NOP;
-	__NOP;
 }
 
-
-
-void init_rdyn(void) {
-  LPC_GPIO0->IE |= RDYnBIT; 
-
-
-	// LPC_UART->IER = RBRIE | RXLIE; // enabling THREIE makes stuck in handler because we're sending...
-  NVIC_EnableIRQ(EINT0_IRQn); // enable GPIO0 interrupt
-
-  
-}
 
 void init_leds(void) 
 {
@@ -163,16 +143,13 @@ int main(void)
 	pll_start(CRYSTAL, FREQUENCY);			// start the PLL
 	init_system();							// initialize other necessary elements
 	resetBuf(&rxBuf);
-
 	init_uart(&rxBuf);
 	// init_ssp();
 	unsigned int i;
 	for(i=0; i < 0xFFFFF; ++i);         // delay to make scope readings easier to read
 	init_leds();
-	// init_rdyn();
-	uint8_t port = 0 , pin = 11, enable = 1;
-	// gpio_setup_int(port, pin, enable, PIOINT0_IRQHandler);
-	gpio_setup_int(0, 11, 1, my_test_interrupt);
+	
+	gpio_setup_int(0, 7, 1, my_test_interrupt);
 	
 	write_uart("initialized rdy interrupt");
 	
@@ -181,27 +158,13 @@ int main(void)
 	char numbuf[2];
 	numbuf[1] = '\0';
 	while(1){                    //infinite loop
-		// uartRXBytes = getNumBytesToRead(&rxBuf);
-		// if(uartRXBytes > 0){
-		// 	blink_led();
 
-		// 	write_uart_len(rxBuf.data, uartRXBytes);
-		// 	resetBuf(&rxBuf);
-
-		// 	test_ssp();
-
-		// }
-		// write_uart("waiting for GPIO interrupt");
-		// blink_led();
 		if(rdy_int) {
 
 			write_uart("gpio interrupt fired:");
 			blink_led();
 			rdy_int = 0;
 		}
-
-	  // for(i=0; i < 0xFFFFF; ++i);         // delay to make scope readings easier to read
-
   }
 
 	return 0;
