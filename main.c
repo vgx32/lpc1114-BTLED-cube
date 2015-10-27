@@ -43,6 +43,7 @@
 #include "buffer.h"
 #include "uart.h"
 #include "ssp.h"
+#include "gpio.h"
 #include "hdr/hdr_syscon.h"
 
 // porting ACI ble library
@@ -102,6 +103,8 @@ static Buffer rxBuf = {.end=0, .start=0};
 	//		-- use an interrupt+timer
 
 #define RDYnBIT (1<<11)
+
+// #define GPORTN(x)  LPC_GPIO ## #x 
 static volatile char rdy_int = 0;
 void PIOINT0_IRQHandler(void) {
 	rdy_int = 1;
@@ -120,6 +123,12 @@ void init_rdyn(void) {
   NVIC_EnableIRQ(EINT0_IRQn); // enable GPIO0 interrupt
 
   
+}
+
+void init_other_led(void) 
+{
+	gpio_enable(1, 5, 1);
+	gpio_write(1, 5, 0);
 }
 
 static void delay_us(uint32_t duration) {
@@ -151,10 +160,13 @@ int main(void)
 
 	init_uart(&rxBuf);
 	// init_ssp();
-
-	init_rdyn();
-	write_uart("initialized rdy interrupt");
 	unsigned int i;
+	for(i=0; i < 0xFFFFF; ++i);         // delay to make scope readings easier to read
+	init_other_led();
+	// init_rdyn();
+	uint8_t port = 0 , pin = 11, enable = 1;
+	gpio_setup_int(port, pin, enable, PIOINT0_IRQHandler);
+	write_uart("initialized rdy interrupt");
 
 	blink_led();
 	int uartRXBytes = 0;
@@ -202,9 +214,11 @@ static void blink_led(void) {
 	LED_GPIO->DIR |= LED;					// set the direction of the LED pin to output
 	delay_ms(500);
 	LED_gma = LED;						// instead of LED_GPIO->DATA |= LED;
+	gpio_write(1, 5, 1);
 	delay_ms(500);
 	
-	LED_gma = 0;						// instead of LED_GPIO->DATA &= ~LED;
+	LED_gma = 0;					// instead of LED_GPIO->DATA &= ~LED;
+	gpio_write(1, 5, 0);
 
 }
 
