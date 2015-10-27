@@ -106,11 +106,14 @@ static Buffer rxBuf = {.end=0, .start=0};
 
 // #define GPORTN(x)  LPC_GPIO ## #x 
 static volatile char rdy_int = 0;
-void PIOINT0_IRQHandler(void) {
+void my_test_interrupt(void) {
+	// int32_t ie = LPC_GPIO0->IE;
 	rdy_int = 1;
-
-	LPC_GPIO0->IC |= RDYnBIT;
+	
 	// LPC_GPIO0->IC |= 0xff;
+	LPC_GPIO0->IC |= RDYnBIT;
+	__NOP;
+	__NOP;
 }
 
 
@@ -125,10 +128,13 @@ void init_rdyn(void) {
   
 }
 
-void init_other_led(void) 
+void init_leds(void) 
 {
 	gpio_enable(1, 5, 1);
+	gpio_enable(1, 8, 1);
 	gpio_write(1, 5, 0);
+	gpio_write(1, 8, 0);
+
 }
 
 static void delay_us(uint32_t duration) {
@@ -162,15 +168,18 @@ int main(void)
 	// init_ssp();
 	unsigned int i;
 	for(i=0; i < 0xFFFFF; ++i);         // delay to make scope readings easier to read
-	init_other_led();
+	init_leds();
 	// init_rdyn();
 	uint8_t port = 0 , pin = 11, enable = 1;
-	gpio_setup_int(port, pin, enable, PIOINT0_IRQHandler);
+	// gpio_setup_int(port, pin, enable, PIOINT0_IRQHandler);
+	gpio_setup_int(0, 11, 1, my_test_interrupt);
+	
 	write_uart("initialized rdy interrupt");
-
+	
 	blink_led();
 	int uartRXBytes = 0;
-
+	char numbuf[2];
+	numbuf[1] = '\0';
 	while(1){                    //infinite loop
 		// uartRXBytes = getNumBytesToRead(&rxBuf);
 		// if(uartRXBytes > 0){
@@ -185,7 +194,8 @@ int main(void)
 		// write_uart("waiting for GPIO interrupt");
 		// blink_led();
 		if(rdy_int) {
-			write_uart("gpio interrupt fired");
+
+			write_uart("gpio interrupt fired:");
 			blink_led();
 			rdy_int = 0;
 		}
@@ -203,23 +213,20 @@ int main(void)
 +=============================================================================+
 */
 
-// #define LED_GPIO							LPC_GPIO1	///< GPIO port to which the LED is connected
-// #define LED_pin								8			///< pin number of the LED
-
-// #define LED									(1 << LED_pin)
-
 
 static void blink_led(void) {
 	
-	LED_GPIO->DIR |= LED;					// set the direction of the LED pin to output
+	// LED_GPIO->DIR |= LED;					// set the direction of the LED pin to output
 	delay_ms(500);
 	LED_gma = LED;						// instead of LED_GPIO->DATA |= LED;
 	gpio_write(1, 5, 1);
+	gpio_write(1, 8, 1);
 	delay_ms(500);
 	
 	LED_gma = 0;					// instead of LED_GPIO->DATA &= ~LED;
 	gpio_write(1, 5, 0);
-
+	gpio_write(1, 8, 0);
+	
 }
 
 

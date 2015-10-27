@@ -14,7 +14,6 @@ LPC_GPIO_TypeDef* gpio_port(uint8_t port);
 
 typedef void (*IntHandler)(void);
 
-IntHandler gpio0_handler;
 // enables gpio input/output functionality on port + pin 
 // direction == 0: set as input
 // direction /= 0: set as output
