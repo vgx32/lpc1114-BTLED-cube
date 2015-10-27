@@ -97,7 +97,8 @@ USES_CXX = 0
 
 # define warning options here
 CXX_WARNINGS = -Wall -Wextra
-C_WARNINGS = -Wall -Wstrict-prototypes -Wextra
+# C_WARNINGS = -Wall -Wstrict-prototypes -Wextra
+C_WARNINGS = -Wstrict-prototypes -Wextra
 
 # C++ language standard ("c++98", "gnu++98" - default, "c++0x", "gnu++0x")
 CXX_STD = gnu++98
@@ -287,12 +288,22 @@ make_output_dir :
 
 FLASHMODE_ON = python ../flasher/flashctrl.py 'f'
 FLASHCOMMAND = ../lpc21isp/lpc21isp $(HEX) /dev/ttyUSB1 115200 120000
-FLASHMODE_OFF = python ../flasher/flashctrl.py 'r'
+FLASHMODE_OFF = python ../flasher/flashctrl.py 'r' &
 
 flash : $(HEX)
 	$(FLASHMODE_ON)
 	$(FLASHCOMMAND)
 	$(FLASHMODE_OFF)
+
+
+MONITOR = python ../ftdimon/ftdimon.py 1
+
+buildmon: flash
+	$(MONITOR)
+
+reset:
+	$(FLASHMODE_OFF)
+	$(MONITOR)
 
 #=============================================================================#
 # make clean
