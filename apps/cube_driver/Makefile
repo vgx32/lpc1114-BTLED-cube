@@ -26,6 +26,8 @@ RM = rm -f
 # project configuration
 #=============================================================================#
 
+LIBS_ROOT = ../..
+
 # project name
 PROJECT = led_cube
 
@@ -33,7 +35,7 @@ PROJECT = led_cube
 CORE = cortex-m0
 
 # linker script
-LD_SCRIPT = LPC11x14_10x_rom.ld
+LD_SCRIPT = $(LIBS_ROOT)/LPC11x14_10x_rom.ld
 
 # output folder (absolute or relative path, leave empty for in-tree compilation)
 OUT_DIR = out
@@ -47,7 +49,7 @@ C_DEFS =
 # ASM definitions
 AS_DEFS =
 
-LIBS_ROOT = ..
+
 # include directories (absolute or relative paths to additional folders with
 # headers, current folder is always included)
 INC_DIRS = $(LIBS_ROOT)/lib $(LIBS_ROOT)/lib/ble $(LIBS_ROOT)/hdr $(LIBS_ROOT)/inc $(LIBS_ROOT)
