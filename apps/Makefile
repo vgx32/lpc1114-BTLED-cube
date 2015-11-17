@@ -47,9 +47,10 @@ C_DEFS =
 # ASM definitions
 AS_DEFS =
 
+LIBS_ROOT = ..
 # include directories (absolute or relative paths to additional folders with
 # headers, current folder is always included)
-INC_DIRS = ./lib ./lib/ble
+INC_DIRS = $(LIBS_ROOT)/lib $(LIBS_ROOT)/lib/ble $(LIBS_ROOT)/hdr $(LIBS_ROOT)/inc $(LIBS_ROOT)
 
 # library directories (absolute or relative paths to additional folders with
 # libraries)
@@ -61,7 +62,7 @@ LIBS =
 
 # additional directories with source files (absolute or relative paths to
 # folders with source files, current folder is always included)
-SRCS_DIRS = ./lib
+SRCS_DIRS = $(LIBS_ROOT)/lib
 
 # extension of C++ files
 CXX_EXT = cpp
@@ -286,9 +287,9 @@ make_output_dir :
 # flash hex onto chip
 #-----------------------------------------------------------------------------#
 
-FLASHMODE_ON = python ../flasher/flashctrl.py 'f'
-FLASHCOMMAND = ../lpc21isp/lpc21isp $(HEX) /dev/ttyUSB1 115200 120000
-FLASHMODE_OFF = python ../flasher/flashctrl.py 'r' &
+FLASHMODE_ON = python $(LIBS_ROOT)/../ftdi_tools/flashctrl.py 'f'
+FLASHCOMMAND = $(LIBS_ROOT)/../lpc21isp/lpc21isp $(HEX) /dev/ttyUSB1 115200 120000
+FLASHMODE_OFF = python $(LIBS_ROOT)/../ftdi_tools/flashctrl.py 'r' &
 
 flash : $(HEX)
 	$(FLASHMODE_ON)
@@ -296,9 +297,12 @@ flash : $(HEX)
 	$(FLASHMODE_OFF)
 
 
-MONITOR = python ../ftdimon/ftdimon.py 1
+MONITOR = python $(LIBS_ROOT)/../ftdi_tools/ftdimon.py 1
 
-buildmon: flash
+flashmon: flash
+	$(MONITOR)
+
+monitor:
 	$(MONITOR)
 
 reset:

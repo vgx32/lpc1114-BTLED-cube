@@ -37,14 +37,14 @@
 
 #include <stdint.h>
 
-#include "inc/LPC11xx.h"
-#include "inc/core_cm0.h"
+#include "LPC11xx.h"
+#include "core_cm0.h"
 #include "config.h"
 #include "buffer.h"
 #include "uart.h"
 #include "ssp.h"
 #include "gpio.h"
-#include "hdr/hdr_syscon.h"
+#include "hdr_syscon.h"
 
 // porting ACI ble library
 #include "ble/aci.h"		// enums and defines for nrf-specific config constants
